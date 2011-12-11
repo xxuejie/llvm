@@ -299,6 +299,8 @@ public:
       &GenericAsmParser::ParseDirectiveCFISameValue>(".cfi_same_value");
     AddDirectiveHandler<
       &GenericAsmParser::ParseDirectiveCFIRestore>(".cfi_restore");
+    AddDirectiveHandler<
+      &GenericAsmParser::ParseDirectiveCFIEscape>(".cfi_escape");
 
     // Macro directives.
     AddDirectiveHandler<&GenericAsmParser::ParseDirectiveMacrosOnOff>(
@@ -333,6 +335,7 @@ public:
   bool ParseDirectiveCFIRestoreState(StringRef, SMLoc DirectiveLoc);
   bool ParseDirectiveCFISameValue(StringRef, SMLoc DirectiveLoc);
   bool ParseDirectiveCFIRestore(StringRef, SMLoc DirectiveLoc);
+  bool ParseDirectiveCFIEscape(StringRef, SMLoc DirectiveLoc);
 
   bool ParseDirectiveMacrosOnOff(StringRef, SMLoc DirectiveLoc);
   bool ParseDirectiveMacro(StringRef, SMLoc DirectiveLoc);
@@ -2770,6 +2773,31 @@ bool GenericAsmParser::ParseDirectiveCFIRestore(StringRef IDVal,
 
   getStreamer().EmitCFIRestore(Register);
 
+  return false;
+}
+
+/// ParseDirectiveCFIEscape
+/// ::= .cfi_escape expression[,...]
+bool GenericAsmParser::ParseDirectiveCFIEscape(StringRef IDVal,
+					       SMLoc DirectiveLoc) {
+  std::vector<uint8_t> Values;
+  int64_t CurrValue;
+  if (getParser().ParseAbsoluteExpression(CurrValue)) {
+    return true;
+  }
+  Values.push_back((uint8_t)CurrValue);
+
+  while (getLexer().is(AsmToken::Comma)) {
+    Lex();
+
+    if (getParser().ParseAbsoluteExpression(CurrValue)) {
+      return TokError("Expected absolute expression");
+    }
+
+    Values.push_back((uint8_t)CurrValue);
+  }
+
+  getStreamer().EmitCFIEscape(Values);
   return false;
 }
 

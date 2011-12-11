@@ -230,13 +230,14 @@ namespace llvm {
   class MCCFIInstruction {
   public:
     enum OpType { SameValue, RememberState, RestoreState,
-		  Restore, Move, RelMove };
+		  Restore, Move, RelMove, Escape };
   private:
     OpType Operation;
     MCSymbol *Label;
     // Move to & from location.
     MachineLocation Destination;
     MachineLocation Source;
+    std::vector<uint8_t> Values;
   public:
     MCCFIInstruction(OpType Op, MCSymbol *L)
       : Operation(Op), Label(L) {
@@ -255,10 +256,15 @@ namespace llvm {
       : Operation(Op), Label(L), Destination(D), Source(S) {
       assert(Op == RelMove);
     }
+    MCCFIInstruction(OpType Op, MCSymbol *L, std::vector<uint8_t> Vals)
+      : Operation(Op), Label(L), Values(Vals) {
+      assert(Op == Escape);
+    }
     OpType getOperation() const { return Operation; }
     MCSymbol *getLabel() const { return Label; }
     const MachineLocation &getDestination() const { return Destination; }
     const MachineLocation &getSource() const { return Source; }
+    const std::vector<uint8_t> &getValues() const { return Values; }
   };
 
   struct MCDwarfFrameInfo {

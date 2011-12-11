@@ -648,11 +648,17 @@ void FrameEmitterImpl::EmitCFIInstruction(MCStreamer &Streamer,
     Streamer.EmitULEB128IntValue(Reg);
     return;
   }
-  case MCCFIInstruction::Restore:
+  case MCCFIInstruction::Restore: {
     unsigned Reg = Instr.getDestination().getReg();
     if (VerboseAsm) Streamer.AddComment("DW_CFA_restore");
     if (VerboseAsm) Streamer.AddComment(Twine("Reg ") + Twine(Reg));
     Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    return;
+  }
+  case MCCFIInstruction::Escape:
+    if (VerboseAsm) Streamer.AddComment("Escape bytes");
+    StringRef DataString = StringRef((char*)&Instr.getValues()[0], Instr.getValues().size());
+    Streamer.EmitBytes(DataString, 1);
     return;
   }
   llvm_unreachable("Unhandled case in switch");
