@@ -1411,6 +1411,8 @@ X86FrameLowering::adjustForSegmentedStacks(MachineFunction &MF) const {
     } else if (ST->isTargetDarwin()) {
       // TlsOffset doesn't fit into a mod r/m byte so we need an extra instr
       unsigned ScratchReg2 = GetScratchRegister(Is64Bit, MF, false);
+      assert(!MF.getRegInfo().isLiveIn(ScratchReg) &&
+	     "Scratch register is live-in");
       BuildMI(checkMBB, DL, TII.get(X86::MOV32ri))
 	.addReg(ScratchReg2).addImm(TlsOffset);
       BuildMI(checkMBB, DL, TII.get(X86::CMP32rm))
