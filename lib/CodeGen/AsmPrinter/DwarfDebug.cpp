@@ -517,6 +517,10 @@ unsigned DwarfDebug::GetOrCreateSourceID(StringRef FileName,
   if (FileName.empty())
     return GetOrCreateSourceID("<stdin>", StringRef());
 
+  // TODO: this might not belong here. See if we can factor this better.
+  if (DirName == CompilationDir)
+    DirName = "";
+
   unsigned SrcId = SourceIdMap.size()+1;
   std::pair<std::string, std::string> SourceName =
       std::make_pair(FileName, DirName);
