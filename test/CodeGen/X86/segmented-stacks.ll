@@ -2,10 +2,12 @@
 ; RUN: llc < %s -mtriple=x86_64-linux  -segmented-stacks -verify-machineinstrs | FileCheck %s -check-prefix=X64-Linux
 ; RUN: llc < %s -mtriple=i686-darwin -segmented-stacks -verify-machineinstrs | FileCheck %s -check-prefix=X32-Darwin
 ; RUN: llc < %s -mtriple=x86_64-darwin -segmented-stacks -verify-machineinstrs | FileCheck %s -check-prefix=X64-Darwin
+; RUN: llc < %s -mtriple=i686-mingw32 -segmented-stacks -verify-machineinstrs | FileCheck %s -check-prefix=X32-MinGW
 ; RUN: llc < %s -mtriple=i686-linux -segmented-stacks -filetype=obj
 ; RUN: llc < %s -mtriple=x86_64-linux -segmented-stacks -filetype=obj
 ; RUN: llc < %s -mtriple=i686-darwin -segmented-stacks -filetype=obj
 ; RUN: llc < %s -mtriple=x86_64-darwin -segmented-stacks -filetype=obj
+; RUN: llc < %s -mtriple=i686-mingw32 -segmented-stacks -filetype=obj
 
 ; Just to prevent the alloca from being optimized away
 declare void @dummy_use(i32*, i32)
@@ -56,6 +58,16 @@ define void @test_basic() {
 ; X64-Darwin-NEXT: callq ___morestack
 ; X64-Darwin-NEXT: ret
 
+; X32-MinGW:       test_basic:
+
+; X32-MinGW:       cmpl %fs:20, %esp
+; X32-MinGW-NEXT:  ja      LBB0_2
+
+; X32-MinGW:       pushl $0
+; X32-MinGW-NEXT:  pushl $52
+; X32-MinGW-NEXT:  calll ___morestack
+; X32-MinGW-NEXT:  ret
+
 }
 
 define i32 @test_nested(i32 * nest %closure, i32 %other) {
@@ -100,6 +112,14 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) {
 ; X64-Darwin-NEXT: ret
 ; X64-Darwin-NEXT: movq %rax, %r10
 
+; X32-MinGW:       cmpl %fs:20, %esp
+; X32-MinGW-NEXT:  ja      LBB1_2
+
+; X32-MinGW:       pushl $4
+; X32-MinGW-NEXT:  pushl $0
+; X32-MinGW-NEXT:  calll ___morestack
+; X32-MinGW-NEXT:  ret
+
 }
 
 define void @test_large() {
@@ -143,6 +163,15 @@ define void @test_large() {
 ; X64-Darwin-NEXT: movabsq $0, %r11
 ; X64-Darwin-NEXT: callq ___morestack
 ; X64-Darwin-NEXT: ret
+
+; X32-MinGW:       leal -40012(%esp), %ecx
+; X32-MinGW-NEXT:  cmpl %fs:20, %ecx
+; X32-MinGW-NEXT:  ja      LBB2_2
+
+; X32-MinGW:       pushl $0
+; X32-MinGW-NEXT:  pushl $40012
+; X32-MinGW-NEXT:  calll ___morestack
+; X32-MinGW-NEXT:  ret
 
 }
 
@@ -191,6 +220,16 @@ define fastcc void @test_fastcc() {
 ; X64-Darwin-NEXT: movabsq $0, %r11
 ; X64-Darwin-NEXT: callq ___morestack
 ; X64-Darwin-NEXT: ret
+
+; X32-MinGW:       test_fastcc:
+
+; X32-MinGW:       cmpl %fs:20, %esp
+; X32-MinGW-NEXT:  ja      LBB3_2
+
+; X32-MinGW:       pushl $0
+; X32-MinGW-NEXT:  pushl $52
+; X32-MinGW-NEXT:  calll ___morestack
+; X32-MinGW-NEXT:  ret
 
 }
 
@@ -243,6 +282,17 @@ define fastcc void @test_fastcc_large() {
 ; X64-Darwin-NEXT: movabsq $0, %r11
 ; X64-Darwin-NEXT: callq ___morestack
 ; X64-Darwin-NEXT: ret
+
+; X32-MinGW:       test_fastcc_large:
+
+; X32-MinGW:       leal -40012(%esp), %eax
+; X32-MinGW-NEXT:  cmpl %fs:20, %eax
+; X32-MinGW-NEXT:  ja      LBB4_2
+
+; X32-MinGW:       pushl $0
+; X32-MinGW-NEXT:  pushl $40012
+; X32-MinGW-NEXT:  calll ___morestack
+; X32-MinGW-NEXT:  ret
 
 }
 
