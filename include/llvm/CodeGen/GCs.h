@@ -26,7 +26,13 @@ namespace llvm {
   
   /// Creates an ocaml-compatible metadata printer.
   void linkOcamlGCPrinter();
-  
+
+  /// Creates a Rust-compatible garbage collector.
+  void linkRustGC();
+
+  /// Creates a Rust-compatible metadata printer.
+  void linkRustGCPrinter();
+
   /// Creates a shadow stack garbage collector. This collector requires no code
   /// generator support.
   void linkShadowStackGC();

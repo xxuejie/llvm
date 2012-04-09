@@ -79,6 +79,7 @@ add_llvm_library(LLVMCodeGen
   RegisterCoalescer.cpp
   RegisterScavenging.cpp
   RenderMachineFunction.cpp
+  RustGC.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp
