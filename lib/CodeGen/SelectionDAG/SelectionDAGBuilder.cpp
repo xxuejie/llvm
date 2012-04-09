@@ -5064,15 +5064,25 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::gcroot:
     if (GFI) {
       const Value *Alloca = I.getArgOperand(0);
-      const Constant *TypeMap = cast<Constant>(I.getArgOperand(1));
+      // TODO: const Constant *TypeMap = cast<Constant>(I.getArgOperand(1));
 
       FrameIndexSDNode *FI = cast<FrameIndexSDNode>(getValue(Alloca).getNode());
-      GFI->addStackRoot(FI->getIndex(), TypeMap);
+      // TODO: We need some way to get from the constant to the MCSymbol.
+      GFI->addGlobalRoot(FI->getIndex(), NULL);
     }
     return 0;
   case Intrinsic::gcread:
   case Intrinsic::gcwrite:
     llvm_unreachable("GC failed to lower gcread/gcwrite intrinsics!");
+  case Intrinsic::gcnoteroot: {
+    EVT vt = MVT::Other;
+    SmallVector<SDValue, 3> Values;
+    Values.push_back(getRoot()); // root
+    Values.push_back(getValue(I.getArgOperand(0))); // root
+    Values.push_back(getValue(I.getArgOperand(1))); // meta
+    DAG.setRoot(DAG.getNode(ISD::GCNOTEROOT, dl, &vt, 1, &Values[0], 3));
+    return 0;
+  }
   case Intrinsic::flt_rounds:
     setValue(&I, DAG.getNode(ISD::FLT_ROUNDS_, dl, MVT::i32));
     return 0;
