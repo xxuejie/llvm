@@ -372,7 +372,10 @@ X86InstrInfo::X86InstrInfo(X86TargetMachine &tm)
     { X86::VMOVAPSYrr,  X86::VMOVAPSYmr,    TB_FOLDED_STORE | TB_ALIGN_32 },
     { X86::VMOVDQAYrr,  X86::VMOVDQAYmr,    TB_FOLDED_STORE | TB_ALIGN_32 },
     { X86::VMOVUPDYrr,  X86::VMOVUPDYmr,    TB_FOLDED_STORE },
-    { X86::VMOVUPSYrr,  X86::VMOVUPSYmr,    TB_FOLDED_STORE }
+    { X86::VMOVUPSYrr,  X86::VMOVUPSYmr,    TB_FOLDED_STORE },
+    // GC root notes
+    { X86::X86NOTEROOT32r, X86::X86NOTEROOT32m, TB_FOLDED_LOAD },
+    { X86::X86NOTEROOT64r, X86::X86NOTEROOT64m, TB_FOLDED_LOAD }
   };
 
   for (unsigned i = 0, e = array_lengthof(OpTbl0); i != e; ++i) {
@@ -2959,14 +2962,20 @@ MachineInstr* X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF,
                                                   MachineInstr *MI,
                                            const SmallVectorImpl<unsigned> &Ops,
                                                   int FrameIndex) const {
-  // Check switch flag
-  if (NoFusing) return NULL;
+  // We must unconditionally fold GC root notes. Otherwise, the register
+  // allocator will insert explicit reload instructions between the root note
+  // and the safe point, destroying the notes' coherence.
+  if (MI->getOpcode() != X86::X86NOTEROOT32r &&
+      MI->getOpcode() != X86::X86NOTEROOT64r) {
+    // Check switch flag
+    if (NoFusing) return NULL;
 
-  // Unless optimizing for size, don't fold to avoid partial
-  // register update stalls
-  if (!MF.getFunction()->hasFnAttr(Attribute::OptimizeForSize) &&
-      hasPartialRegUpdate(MI->getOpcode()))
-    return 0;
+    // Unless optimizing for size, don't fold to avoid partial
+    // register update stalls
+    if (!MF.getFunction()->hasFnAttr(Attribute::OptimizeForSize) &&
+        hasPartialRegUpdate(MI->getOpcode()))
+      return 0;
+  }
 
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned Size = MFI->getObjectSize(FrameIndex);
@@ -3000,14 +3009,18 @@ MachineInstr* X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF,
                                                   MachineInstr *MI,
                                            const SmallVectorImpl<unsigned> &Ops,
                                                   MachineInstr *LoadMI) const {
-  // Check switch flag
-  if (NoFusing) return NULL;
+  // See comment above regarding why we must fold root notes.
+  if (MI->getOpcode() != X86::X86NOTEROOT32r &&
+      MI->getOpcode() != X86::X86NOTEROOT64r) {
+    // Check switch flag
+    if (NoFusing) return NULL;
 
-  // Unless optimizing for size, don't fold to avoid partial
-  // register update stalls
-  if (!MF.getFunction()->hasFnAttr(Attribute::OptimizeForSize) &&
-      hasPartialRegUpdate(MI->getOpcode()))
-    return 0;
+    // Unless optimizing for size, don't fold to avoid partial
+    // register update stalls
+    if (!MF.getFunction()->hasFnAttr(Attribute::OptimizeForSize) &&
+        hasPartialRegUpdate(MI->getOpcode()))
+      return 0;
+  }
 
   // Determine the alignment of the load.
   unsigned Alignment = 0;
