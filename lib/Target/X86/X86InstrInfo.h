@@ -363,6 +363,9 @@ public:
                              const MachineInstr *DefMI, unsigned DefIdx,
                              const MachineInstr *UseMI, unsigned UseIdx) const;
 
+  virtual bool isInstructionRootNote(const MachineInstr *MI) const;
+  virtual GCRoot getGCRootForNote(const MachineInstr *MI) const;
+
 private:
   MachineInstr * convertToThreeAddressWithLEA(unsigned MIOpc,
                                               MachineFunction::iterator &MFI,
@@ -373,6 +376,8 @@ private:
   /// operand and follow operands form a reference to the stack frame.
   bool isFrameOperand(const MachineInstr *MI, unsigned int Op,
                       int &FrameIndex) const;
+
+  int getGCRegisterIndex(int Reg) const;
 };
 
 } // End llvm namespace

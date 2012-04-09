@@ -16,7 +16,8 @@
 // stack map. The code generator outputs:
 //
 //   - Safe points as specified by the GCStrategy's NeededSafePoints.
-//   - Stack offsets for GC roots, as specified by calls to llvm.gcroot
+//   - Stack offsets for GC roots, as specified by calls to llvm.gcroot or
+//     noteroot attributes
 //
 // As a refinement, liveness analysis calculates the set of live roots at each
 // safe point. Liveness analysis is not presently performed by the code
@@ -36,6 +37,7 @@
 #include "llvm/Pass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/Support/DebugLoc.h"
 
 namespace llvm {
@@ -55,25 +57,79 @@ namespace llvm {
     };
   }
 
-  /// GCPoint - Metadata for a collector-safe point in machine code.
+  /// GCRootMetadata - User-supplied metadata for a GC root, either an LLVM
+  /// Constant value or an opaque unsigned integer.
   ///
-  struct GCPoint {
-    GC::PointKind Kind; //< The kind of the safe point.
-    MCSymbol *Label;    //< A label.
-    DebugLoc Loc;
-
-    GCPoint(GC::PointKind K, MCSymbol *L, DebugLoc DL)
-        : Kind(K), Label(L), Loc(DL) {}
+  union GCRootMetadata {
+    const Constant *Const;
+    unsigned Num;
   };
 
   /// GCRoot - Metadata for a pointer to an object managed by the garbage
   /// collector.
+  ///
   struct GCRoot {
-    int Num;            //< Usually a frame index.
-    int StackOffset;    //< Offset from the stack pointer.
-    const Constant *Metadata;//< Metadata straight from the call to llvm.gcroot.
+    bool Stack;                 //< True if on the stack, false otherwise.
+    int Data;                   //< Stack offset if on stack, register number
+                                //  otherwise.
+    bool MetadataIsConstant;    //< True if the metadata is an LLVM Constant,
+                                //  false otherwise.
+    GCRootMetadata Metadata;    //< Metadata associated with this root.
 
-    GCRoot(int N, const Constant *MD) : Num(N), StackOffset(-1), Metadata(MD) {}
+    GCRoot(bool S, const Constant *MD, int D)
+    : Stack(S), Data(D), MetadataIsConstant(true) {
+      Metadata.Const = MD;
+    }
+
+    GCRoot(bool S, unsigned MD, int D)
+    : Stack(S), Data(D), MetadataIsConstant(false) {
+      Metadata.Num = MD;
+    }
+  };
+
+  /// GCPoint - Metadata for a collector-safe point in machine code.
+  ///
+  class GCPoint {
+  public:
+    typedef std::vector<GCRoot>::iterator iterator;
+
+    GC::PointKind Kind;         //< The kind of the safe point.
+    MCSymbol *Label;            //< A label.
+    DebugLoc Loc;
+
+    GCPoint(GC::PointKind K, MCSymbol *L, DebugLoc DL)
+        : Kind(K), Label(L), Loc(DL) {}
+
+    /// begin/end - Iterators for roots at a safe point.
+    ///
+    iterator begin()      { return Roots.begin(); }
+    iterator end()        { return Roots.end();   }
+
+    unsigned size() const { return Roots.size();  }
+
+    GCRoot *getRootNum(unsigned i) { return &Roots[i]; }
+    void addRoot(GCRoot &NewRoot) { Roots.push_back(NewRoot); }
+
+  private:
+    std::vector<GCRoot> Roots;  //< The GC roots at this safe point.
+  };
+
+  /// GCGlobalRoot - Metadata for a garbage collected global root.
+  ///
+  struct GCGlobalRoot {
+    int Num;                  //< Frame index of this root.
+    const Constant *Metadata; //< Metadata associated with this root.
+
+    GCGlobalRoot(int N, const Constant *MD) : Num(N), Metadata(MD) {}
+  };
+
+  /// GCCalleeSave - Metadata for a callee-saved register.
+  ///
+  struct GCCalleeSave {
+    uint8_t Reg;  //< Register number.
+    uint8_t Loc;  //< Stack offset.
+
+    GCCalleeSave(int R, int L) : Reg(R), Loc(L) {}
   };
 
 
@@ -82,15 +138,15 @@ namespace llvm {
   class GCFunctionInfo {
   public:
     typedef std::vector<GCPoint>::iterator iterator;
-    typedef std::vector<GCRoot>::iterator roots_iterator;
-    typedef std::vector<GCRoot>::const_iterator live_iterator;
+    typedef std::vector<GCGlobalRoot>::iterator global_root_iterator;
 
   private:
     const Function &F;
     GCStrategy &S;
     uint64_t FrameSize;
-    std::vector<GCRoot> Roots;
     std::vector<GCPoint> SafePoints;
+    std::vector<GCGlobalRoot> GlobalRoots;
+    std::vector<GCCalleeSave> CalleeSaves;
 
     // FIXME: Liveness. A 2D BitVector, perhaps?
     //
@@ -114,18 +170,27 @@ namespace llvm {
     ///
     GCStrategy &getStrategy() { return S; }
 
-    /// addStackRoot - Registers a root that lives on the stack. Num is the
-    ///                stack object ID for the alloca (if the code generator is
-    //                 using  MachineFrameInfo).
-    void addStackRoot(int Num, const Constant *Metadata) {
-      Roots.push_back(GCRoot(Num, Metadata));
-    }
-
     /// addSafePoint - Notes the existence of a safe point. Num is the ID of the
     /// label just prior to the safe point (if the code generator is using
     /// MachineModuleInfo).
-    void addSafePoint(GC::PointKind Kind, MCSymbol *Label, DebugLoc DL) {
+    GCPoint &addSafePoint(GC::PointKind Kind, MCSymbol *Label, DebugLoc DL) {
       SafePoints.push_back(GCPoint(Kind, Label, DL));
+      return SafePoints.back();
+    }
+
+    /// addGlobalRoot - Notes the existence of a function-global root. Num
+    /// is the ID of the frame index; MD is the front-end-supplied metadata.
+    ///
+    void addGlobalRoot(int Num, const Constant *Metadata) {
+      GlobalRoots.push_back(GCGlobalRoot(Num, Metadata));
+    }
+
+    const std::vector<GCCalleeSave> getCalleeSaves() const {
+        return CalleeSaves;
+    }
+
+    void addCalleeSave(const GCCalleeSave &CS) {
+        CalleeSaves.push_back(CS);
     }
 
     /// getFrameSize/setFrameSize - Records the function's frame size.
@@ -139,17 +204,10 @@ namespace llvm {
     iterator end()   { return SafePoints.end();   }
     size_t size() const { return SafePoints.size(); }
 
-    /// roots_begin/roots_end - Iterators for all roots in the function.
+    /// begin/end - Iterators for global roots.
     ///
-    roots_iterator roots_begin() { return Roots.begin(); }
-    roots_iterator roots_end  () { return Roots.end();   }
-    size_t roots_size() const { return Roots.size(); }
-
-    /// live_begin/live_end - Iterators for live roots at a given safe point.
-    ///
-    live_iterator live_begin(const iterator &p) { return roots_begin(); }
-    live_iterator live_end  (const iterator &p) { return roots_end();   }
-    size_t live_size(const iterator &p) const { return roots_size(); }
+    global_root_iterator global_root_begin() { return GlobalRoots.begin(); }
+    global_root_iterator global_root_end()   { return GlobalRoots.end();   }
   };
 
 
