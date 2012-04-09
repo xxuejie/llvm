@@ -70,13 +70,14 @@ namespace {
     MachineModuleInfo *MMI;
     const TargetInstrInfo *TII;
 
-    void FindSafePoints(MachineFunction &MF);
-    void VisitCallPoint(MachineBasicBlock::iterator MI);
+    void FindSafePointsAndRootNotes(MachineFunction &MF);
+    GCPoint &VisitCallPoint(MachineBasicBlock::iterator MI);
     MCSymbol *InsertLabel(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI,
                           DebugLoc DL) const;
 
     void FindStackOffsets(MachineFunction &MF);
+    void RecordCalleeSaves(MachineFunction &MF);
 
   public:
     static char ID;
@@ -357,7 +358,7 @@ MCSymbol *GCMachineCodeAnalysis::InsertLabel(MachineBasicBlock &MBB,
   return Label;
 }
 
-void GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
+GCPoint &GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
   // Find the return address (next instruction), too, so as to bracket the call
   // instruction.
   MachineBasicBlock::iterator RAI = CI;
@@ -368,28 +369,54 @@ void GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
     FI->addSafePoint(GC::PreCall, Label, CI->getDebugLoc());
   }
 
-  if (FI->getStrategy().needsSafePoint(GC::PostCall)) {
-    MCSymbol* Label = InsertLabel(*CI->getParent(), RAI, CI->getDebugLoc());
-    FI->addSafePoint(GC::PostCall, Label, CI->getDebugLoc());
-  }
-}
-
-void GCMachineCodeAnalysis::FindSafePoints(MachineFunction &MF) {
-  for (MachineFunction::iterator BBI = MF.begin(),
-                                 BBE = MF.end(); BBI != BBE; ++BBI)
-    for (MachineBasicBlock::iterator MI = BBI->begin(),
-                                     ME = BBI->end(); MI != ME; ++MI)
-      if (MI->isCall())
-        VisitCallPoint(MI);
+  MCSymbol* Label = InsertLabel(*CI->getParent(), RAI, CI->getDebugLoc());
+  return FI->addSafePoint(GC::PostCall, Label, CI->getDebugLoc());
 }
 
 void GCMachineCodeAnalysis::FindStackOffsets(MachineFunction &MF) {
   const TargetFrameLowering *TFI = TM->getFrameLowering();
   assert(TFI && "TargetRegisterInfo not available!");
 
-  for (GCFunctionInfo::roots_iterator RI = FI->roots_begin(),
-                                      RE = FI->roots_end(); RI != RE; ++RI)
-    RI->StackOffset = TFI->getFrameIndexOffset(MF, RI->Num);
+  for (GCFunctionInfo::global_root_iterator GRI = FI->global_root_begin(),
+                                            GRE = FI->global_root_end();
+        GRI != GRE; ++GRI) {
+    int FrameIndexOffset = TFI->getFrameIndexOffset(MF, GRI->Num);
+    GCRoot SR(true, GRI->Metadata, FrameIndexOffset);
+    for (GCFunctionInfo::iterator PI = FI->begin(),
+                                  PE = FI->end(); PI != PE; ++PI)
+      PI->addRoot(SR);
+  }
+}
+
+void GCMachineCodeAnalysis::FindSafePointsAndRootNotes(MachineFunction &MF) {
+  for (MachineFunction::iterator BBI = MF.begin(),
+                                 BBE = MF.end(); BBI != BBE; ++BBI) {
+    GCPoint *LastPoint = NULL;
+    for (MachineBasicBlock::iterator MI = BBI->begin(),
+                                     ME = BBI->end(); MI != ME; ++MI) {
+      if (MI->getDesc().isCall()) {
+        GCPoint &Point = VisitCallPoint(MI);
+        LastPoint = &Point;
+      } else if (TII->isInstructionRootNote(MI)) {
+        assert(LastPoint && "Found root note without a safe point!");
+        GCRoot Root = TII->getGCRootForNote(&*MI);
+        LastPoint->addRoot(Root);
+      }
+    }
+  }
+}
+
+void GCMachineCodeAnalysis::RecordCalleeSaves(MachineFunction &MF) {
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const std::vector<CalleeSavedInfo> &CSInfo =
+      MF.getFrameInfo()->getCalleeSavedInfo();
+  for (std::vector<CalleeSavedInfo>::const_iterator CSIB = CSInfo.begin(),
+                                                    CSIE = CSInfo.end();
+       CSIB != CSIE; ++CSIB) {
+    GCCalleeSave CalleeSave(TII->getGCRegisterIndex(CSIB->getReg()),
+                            -MFI->getObjectOffset(CSIB->getFrameIdx()));
+    FI->addCalleeSave(CalleeSave);
+  }
 }
 
 bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
@@ -408,12 +435,18 @@ bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
   // Find the size of the stack frame.
   FI->setFrameSize(MF.getFrameInfo()->getStackSize());
 
-  // Find all safe points.
+  // Find all safe points and root notes.
   if (FI->getStrategy().customSafePoints()) {
     FI->getStrategy().findCustomSafePoints(*FI, MF);
-  } else {
-    FindSafePoints(MF);
   }
+
+  FindSafePointsAndRootNotes(MF);
+
+  // Record the callee-saved registers.
+  RecordCalleeSaves(MF);
+
+  // Find all safe points and root notes.
+  FindSafePointsAndRootNotes(MF);
 
   // Find the stack offsets for all roots.
   FindStackOffsets(MF);

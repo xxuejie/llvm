@@ -3816,6 +3816,66 @@ hasHighOperandLatency(const InstrItineraryData *ItinData,
   return isHighLatencyDef(DefMI->getOpcode());
 }
 
+bool X86InstrInfo::isInstructionRootNote(const MachineInstr *MI) const {
+  switch (MI->getOpcode()) {
+  case X86::X86NOTEROOT32m:
+  case X86::X86NOTEROOT32r:
+  case X86::X86NOTEROOT64m:
+  case X86::X86NOTEROOT64r:
+    return true;
+  }
+  return false;
+}
+
+int X86InstrInfo::getGCRegisterIndex(int Reg) const {
+  switch (Reg) {
+  case X86::EAX: case X86::RAX: return 0;
+  case X86::EBX: case X86::RBX: return 1;
+  case X86::ECX: case X86::RCX: return 2;
+  case X86::EDX: case X86::RDX: return 3;
+  case X86::ESI: case X86::RSI: return 4;
+  case X86::EDI: case X86::RDI: return 5;
+  case X86::EBP: case X86::RBP: return 6;
+  case X86::EIP: case X86::RIP: return 7;
+  case X86::R8:                 return 8;
+  case X86::R9:                 return 9;
+  case X86::R10:                return 10;
+  case X86::R11:                return 11;
+  case X86::R12:                return 12;
+  case X86::R13:                return 13;
+  case X86::R14:                return 14;
+  case X86::R15:                return 15;
+  }
+  return -1;
+}
+
+GCRoot X86InstrInfo::getGCRootForNote(const MachineInstr *MI) const {
+  bool IsStack = false;
+  unsigned Metadata = 0;
+  int Data = 0;
+  switch (MI->getOpcode()) {
+  case X86::X86NOTEROOT32m:
+  case X86::X86NOTEROOT64m:
+    assert((MI->getOperand(0).getReg() == X86::EBP ||
+            MI->getOperand(0).getReg() == X86::RBP) &&
+           "Memory GC root not frame-pointer relative!");
+    IsStack = true;
+    Metadata = MI->getOperand(5).getImm();
+    Data = MI->getOperand(3).getImm();
+    break;
+  case X86::X86NOTEROOT32r:
+  case X86::X86NOTEROOT64r:
+    // TODO: Figure out the MCSymbol to use here.
+    IsStack = false;
+    Metadata = MI->getOperand(1).getImm();
+    Data = getGCRegisterIndex(MI->getOperand(0).getReg());
+    break;
+  default:
+    assert(0 && "Supplied instruction is not a GC root note!");
+  }
+  return GCRoot(IsStack, Metadata, Data);
+}
+
 namespace {
   /// CGBR - Create Global Base Reg pass. This initializes the PIC
   /// global base register for x86-32.

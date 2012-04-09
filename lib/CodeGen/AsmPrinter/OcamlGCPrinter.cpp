@@ -137,7 +137,7 @@ void OcamlGCMetadataPrinter::finishAssembly(AsmPrinter &AP) {
     AP.OutStreamer.AddBlankLine();
 
     for (GCFunctionInfo::iterator J = FI.begin(), JE = FI.end(); J != JE; ++J) {
-      size_t LiveCount = FI.live_size(J);
+      size_t LiveCount = J->size();
       if (LiveCount >= 1<<16) {
         // Very rude!
         report_fatal_error("Function '" + FI.getFunction().getName() +
@@ -149,15 +149,15 @@ void OcamlGCMetadataPrinter::finishAssembly(AsmPrinter &AP) {
       AP.EmitInt16(FrameSize);
       AP.EmitInt16(LiveCount);
 
-      for (GCFunctionInfo::live_iterator K = FI.live_begin(J),
-                                         KE = FI.live_end(J); K != KE; ++K) {
-        if (K->StackOffset >= 1<<16) {
+      for (GCPoint::iterator K = J->begin(), KE = J->end(); K != KE; ++K) {
+        GCRoot *Root = &*K;
+        if (Root->Data >= 1<<16) {
           // Very rude!
           report_fatal_error(
                  "GC root stack offset is outside of fixed stack frame and out "
                  "of range for ocaml GC!");
         }
-        AP.EmitInt16(K->StackOffset);
+        AP.EmitInt16(Root->Data);
       }
 
       AP.EmitAlignment(IntPtrSize == 4 ? 2 : 3);

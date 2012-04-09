@@ -16,6 +16,7 @@
 
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -816,6 +817,29 @@ public:
   virtual DFAPacketizer*
     CreateTargetScheduleState(const TargetMachine*, const ScheduleDAG*) const {
     return NULL;
+  }
+
+  /// isInstructionRootNote - Returns true if this instruction is a target-
+  /// specific root note and false otherwise.
+  ///
+  virtual bool isInstructionRootNote(const MachineInstr *MI) const {
+    return false;
+  }
+
+  /// getGCRegisterIndex - Returns the register index for the given register
+  /// that will be passed to the GCStrategy.
+  virtual int getGCRegisterIndex(int Reg) const {
+    return Reg;
+  }
+
+  /// getGCRootForNote - Returns the GC root corresponding to the given
+  /// instruction.
+  ///
+  /// The instruction must be a root note.
+  ///
+  virtual GCRoot getGCRootForNote(const MachineInstr *MI) const {
+    assert(0 && "Target doesn't support GC root notes!");
+    return GCRoot(false, reinterpret_cast<Constant*>(NULL), 0);
   }
 
 private:
