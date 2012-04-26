@@ -28,16 +28,6 @@ cscope.out
 autoconf/aclocal.m4
 autoconf/autom4te.cache
 
-#==============================================================================#
-# Directories to ignore (do not add trailing '/'s, they skip symlinks).
-#==============================================================================#
-# External projects that are tracked independently.
-projects/*
-!projects/sample
-!projects/CMakeLists.txt
-!projects/Makefile
-# Clang, which is tracked independently.
-tools/clang
 # LLDB, which is tracked independently.
 tools/lldb
 # Sphinx build tree, if building in-source dir.
