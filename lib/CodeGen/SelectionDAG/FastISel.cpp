@@ -49,6 +49,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1044,7 +1045,7 @@ FastISel::SelectOperator(const User *I, unsigned Opcode) {
   }
 }
 
-FastISel::FastISel(FunctionLoweringInfo &funcInfo)
+FastISel::FastISel(FunctionLoweringInfo &funcInfo, GCFunctionInfo &gcInfo)
   : FuncInfo(funcInfo),
     MRI(FuncInfo.MF->getRegInfo()),
     MFI(*FuncInfo.MF->getFrameInfo()),
@@ -1053,7 +1054,8 @@ FastISel::FastISel(FunctionLoweringInfo &funcInfo)
     TD(*TM.getTargetData()),
     TII(*TM.getInstrInfo()),
     TLI(*TM.getTargetLowering()),
-    TRI(*TM.getRegisterInfo()) {
+    TRI(*TM.getRegisterInfo()),
+    GFI(gcInfo) {
 }
 
 FastISel::~FastISel() {}
