@@ -188,7 +188,7 @@ void LowerIntrinsics::getAnalysisUsage(AnalysisUsage &AU) const {
   FunctionPass::getAnalysisUsage(AU);
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<DominatorTree>();
-  AU.addRequired<LiveIRVariables>();
+  // AU.addRequired<LiveIRVariables>();
 }
 
 /// doInitialization - If this module uses the GC intrinsics, find them now.
