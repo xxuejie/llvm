@@ -129,7 +129,7 @@ ARMTargetMachine::ARMTargetMachine(const Target &T, StringRef TT,
     DL(computeDataLayout(Subtarget)),
     TLInfo(*this),
     TSInfo(*this),
-    FrameLowering(Subtarget) {
+    FrameLowering(*this, Subtarget) {
   initAsmInfo();
   if (!Subtarget.hasARMOps())
     report_fatal_error("CPU: '" + Subtarget.getCPUString() + "' does not "
@@ -151,8 +151,8 @@ ThumbTargetMachine::ThumbTargetMachine(const Target &T, StringRef TT,
     TLInfo(*this),
     TSInfo(*this),
     FrameLowering(Subtarget.hasThumb2()
-              ? new ARMFrameLowering(Subtarget)
-              : (ARMFrameLowering*)new Thumb1FrameLowering(Subtarget)) {
+              ? new ARMFrameLowering(*this, Subtarget)
+              : (ARMFrameLowering*)new Thumb1FrameLowering(*this, Subtarget)) {
   initAsmInfo();
 }
 
