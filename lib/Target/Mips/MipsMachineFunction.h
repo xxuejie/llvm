@@ -69,6 +69,9 @@ public:
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 
+  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
+  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
   bool hasByvalArg() const { return HasByvalArg; }
   void setFormalArgInfo(unsigned Size, bool HasByval) {
     IncomingArgSize = Size;
@@ -125,6 +128,10 @@ private:
 
   /// Frame objects for spilling eh data registers.
   int EhDataRegFI[4];
+
+  /// ArgumentStackSize - amount of bytes on stack consumed by the arguments
+  /// being passed on the stack
+  unsigned ArgumentStackSize;
 
   /// MipsCallEntry maps.
   StringMap<const MipsCallEntry *> ExternalCallEntries;
