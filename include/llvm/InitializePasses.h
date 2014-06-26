@@ -247,7 +247,7 @@ void initializeScalarEvolutionAliasAnalysisPass(PassRegistry&);
 void initializeScalarEvolutionWrapperPassPass(PassRegistry&);
 void initializeShrinkWrapPass(PassRegistry &);
 void initializeSimpleInlinerPass(PassRegistry&);
-void initializeShadowStackGCLoweringPass(PassRegistry&);  
+void initializeShadowStackGCLoweringPass(PassRegistry&);
 void initializeRegisterCoalescerPass(PassRegistry&);
 void initializeSingleLoopExtractorPass(PassRegistry&);
 void initializeSinkingPass(PassRegistry&);
@@ -300,6 +300,9 @@ void initializeFloat2IntPass(PassRegistry&);
 void initializeLoopDistributePass(PassRegistry&);
 void initializeSjLjEHPreparePass(PassRegistry&);
 void initializeDemandedBitsPass(PassRegistry&);
+
+// Specific to the rust-lang llvm branch:
+void initializeNullCheckEliminationPass(PassRegistry&);
 }
 
 #endif

@@ -183,6 +183,9 @@ namespace {
       (void) llvm::createFloat2IntPass();
       (void) llvm::createEliminateAvailableExternallyPass();
 
+      // Specific to the rust-lang llvm branch:
+      (void) llvm::createNullCheckEliminationPass();
+
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolutionWrapperPass();
       ((llvm::Function*)nullptr)->viewCFGOnly();

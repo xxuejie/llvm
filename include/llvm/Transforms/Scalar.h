@@ -480,6 +480,13 @@ FunctionPass *createNaryReassociatePass();
 //
 FunctionPass *createLoopDistributePass();
 
+// Specific to the rust-lang llvm branch:
+//===----------------------------------------------------------------------===//
+//
+// NullCheckElimination - Eliminate null checks.
+//
+FunctionPass *createNullCheckEliminationPass();
+
 } // End llvm namespace
 
 #endif
