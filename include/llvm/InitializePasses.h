@@ -278,6 +278,9 @@ void initializeBBVectorizePass(PassRegistry&);
 void initializeMachineFunctionPrinterPassPass(PassRegistry&);
 void initializeStackMapLivenessPass(PassRegistry&);
 void initializeLoadCombinePass(PassRegistry&);
+
+// Specific to the rust-lang llvm branch:
+void initializeNullCheckEliminationPass(PassRegistry&);
 }
 
 #endif
