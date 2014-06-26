@@ -177,6 +177,9 @@ namespace {
       (void) llvm::createMemDerefPrinter();
       (void) llvm::createFloat2IntPass();
 
+      // Specific to the rust-lang llvm branch:
+      (void) llvm::createNullCheckEliminationPass();
+
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolution();
       ((llvm::Function*)nullptr)->viewCFGOnly();
