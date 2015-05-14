@@ -776,6 +776,12 @@ TLI_DEFINE_STRING_INTERNAL("roundf")
 /// long double roundl(long double x);
 TLI_DEFINE_ENUM_INTERNAL(roundl)
 TLI_DEFINE_STRING_INTERNAL("roundl")
+/// void *__rust_allocate(size_t size, size_t align)
+TLI_DEFINE_ENUM_INTERNAL(rust_allocate)
+TLI_DEFINE_STRING_INTERNAL("__rust_allocate")
+/// void __rust_deallocate(void *ptr, size_t size, size_t align)
+TLI_DEFINE_ENUM_INTERNAL(rust_deallocate)
+TLI_DEFINE_STRING_INTERNAL("__rust_deallocate")
 /// int scanf(const char *restrict format, ... );
 TLI_DEFINE_ENUM_INTERNAL(scanf)
 TLI_DEFINE_STRING_INTERNAL("scanf")
