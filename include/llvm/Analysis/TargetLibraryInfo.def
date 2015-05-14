@@ -550,6 +550,12 @@ TLI_DEFINE_STRING_INTERNAL("isascii")
 /// int isdigit(int c);
 TLI_DEFINE_ENUM_INTERNAL(isdigit)
 TLI_DEFINE_STRING_INTERNAL("isdigit")
+/// void *je_mallocx(size_t size, int flags)
+TLI_DEFINE_ENUM_INTERNAL(je_mallocx)
+TLI_DEFINE_STRING_INTERNAL("je_mallocx")
+/// void je_sdallocx(void *ptr, size_t size, int flags)
+TLI_DEFINE_ENUM_INTERNAL(je_sdallocx)
+TLI_DEFINE_STRING_INTERNAL("je_sdallocx")
 /// long int labs(long int j);
 TLI_DEFINE_ENUM_INTERNAL(labs)
 TLI_DEFINE_STRING_INTERNAL("labs")
