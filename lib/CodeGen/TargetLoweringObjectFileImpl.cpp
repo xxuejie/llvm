@@ -437,7 +437,25 @@ TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
 
 TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO()
   : TargetLoweringObjectFile() {
-  SupportIndirectSymViaGOTPCRel = true;
+  // WARNING: this is a difference from upstream LLVM!
+  // -------------------------------------------------
+  //
+  // Disable indirect symbols via GOT pcrel on Mach-O 64-bit
+  //
+  // If this flag is `true`, then it causes LLVM to segfault when compiling Rust
+  // code on 64-bit OSX platforms, reported as this LLVM bug:
+  //
+  //     https://llvm.org/bugs/show_bug.cgi?id=24163
+  //
+  // A bisection turned up r230264 as the offending commit, the review of which
+  // is at http://reviews.llvm.org/D6922. To the best of my knowledge this looks
+  // like it's an optimization for OSX which is fine to omit, so this commit
+  // just flips the flag to *not* perform this optimization, allowing Rust to
+  // bootstrap and pass all tests on OSX 64-bit.
+  //
+  // Once that LLVM bug has been fixed, this should be able to be set to `true`
+  // again.
+  SupportIndirectSymViaGOTPCRel = false;
 }
 
 /// emitModuleFlags - Perform code emission for module flags.
