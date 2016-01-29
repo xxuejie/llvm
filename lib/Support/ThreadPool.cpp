@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #include "llvm/Support/ThreadPool.h"
 
 #include "llvm/Config/llvm-config.h"
@@ -151,5 +153,7 @@ std::shared_future<ThreadPool::VoidTy> ThreadPool::asyncImpl(TaskTy Task) {
 ThreadPool::~ThreadPool() {
   wait();
 }
+
+#endif
 
 #endif
