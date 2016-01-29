@@ -13,6 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #include "OrcLazyJIT.h"
 #include "RemoteJITUtils.h"
 #include "llvm/IR/LLVMContext.h"
@@ -750,4 +752,9 @@ std::unique_ptr<FDRPCChannel> launchRemote() {
   // Return an RPC channel connected to our end of the pipes.
   return llvm::make_unique<FDRPCChannel>(PipeFD[1][0], PipeFD[0][1]);
 #endif
+}
+#endif
+
+int main(int argc, char **argv, char * const *envp) {
+  return 0;
 }

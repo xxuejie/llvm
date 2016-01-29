@@ -1,7 +1,3 @@
-if ( LLVM_INCLUDE_UTILS )
-  add_subdirectory(ChildTarget)
-endif()
-
 set(LLVM_LINK_COMPONENTS
   CodeGen
   Core
@@ -39,6 +35,5 @@ endif( LLVM_USE_INTEL_JITEVENTS )
 
 add_llvm_tool(lli
   lli.cpp
-  OrcLazyJIT.cpp
   )
 export_executable_symbols(lli)

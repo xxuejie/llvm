@@ -102,6 +102,7 @@ protected:
 
     template <typename ChannelT>
     static Error readResult(ChannelT &C, std::promise<OptionalReturn> &P) {
+#if 0
       RetT Val;
       auto Err = deserialize(C, Val);
       auto Err2 = endReceiveMessage(C);
@@ -112,11 +113,14 @@ protected:
         return Err;
       }
       P.set_value(std::move(Val));
+#endif
       return Error::success();
     }
 
     static void abandon(std::promise<OptionalReturn> &P) {
+#if 0
       P.set_value(OptionalReturn());
+#endif
     }
 
     template <typename ChannelT, typename SequenceNumberT>
@@ -159,11 +163,17 @@ protected:
     template <typename ChannelT>
     static Error readResult(ChannelT &C, std::promise<OptionalReturn> &P) {
       // Void functions don't have anything to deserialize, so we're good.
+#if 0
       P.set_value(true);
+#endif
       return endReceiveMessage(C);
     }
 
-    static void abandon(std::promise<OptionalReturn> &P) { P.set_value(false); }
+    static void abandon(std::promise<OptionalReturn> &P) {
+#if 0
+        P.set_value(false);
+#endif
+    }
 
     template <typename ChannelT, typename SequenceNumberT>
     static Error respond(ChannelT &C, SequenceNumberT SeqNo,
@@ -617,13 +627,11 @@ private:
     }
 
     void reset() {
-      std::lock_guard<std::mutex> Lock(SeqNoLock);
       NextSequenceNumber = 0;
       FreeSequenceNumbers.clear();
     }
 
     SequenceNumberT getSequenceNumber() {
-      std::lock_guard<std::mutex> Lock(SeqNoLock);
       if (FreeSequenceNumbers.empty())
         return NextSequenceNumber++;
       auto SequenceNumber = FreeSequenceNumbers.back();
@@ -632,12 +640,10 @@ private:
     }
 
     void releaseSequenceNumber(SequenceNumberT SequenceNumber) {
-      std::lock_guard<std::mutex> Lock(SeqNoLock);
       FreeSequenceNumbers.push_back(SequenceNumber);
     }
 
   private:
-    std::mutex SeqNoLock;
     SequenceNumberT NextSequenceNumber = 0;
     std::vector<SequenceNumberT> FreeSequenceNumbers;
   };

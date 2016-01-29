@@ -27,7 +27,6 @@ set(LLVM_TEST_DEPENDS
           count
           llc
           lli
-          lli-child-target
           llvm-ar
           llvm-as
           llvm-bcanalyzer

@@ -40,42 +40,29 @@ public:
 
   /// Flush the stream if possible.
   virtual Error send() = 0;
-
-  /// Get the lock for stream reading.
-  std::mutex &getReadLock() { return readLock; }
-
-  /// Get the lock for stream writing.
-  std::mutex &getWriteLock() { return writeLock; }
-
-private:
-  std::mutex readLock, writeLock;
 };
 
 /// Notify the channel that we're starting a message send.
 /// Locks the channel for writing.
 inline Error startSendMessage(RPCChannel &C) {
-  C.getWriteLock().lock();
   return Error::success();
 }
 
 /// Notify the channel that we're ending a message send.
 /// Unlocks the channel for writing.
 inline Error endSendMessage(RPCChannel &C) {
-  C.getWriteLock().unlock();
   return Error::success();
 }
 
 /// Notify the channel that we're starting a message receive.
 /// Locks the channel for reading.
 inline Error startReceiveMessage(RPCChannel &C) {
-  C.getReadLock().lock();
   return Error::success();
 }
 
 /// Notify the channel that we're ending a message receive.
 /// Unlocks the channel for reading.
 inline Error endReceiveMessage(RPCChannel &C) {
-  C.getReadLock().unlock();
   return Error::success();
 }
 

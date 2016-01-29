@@ -64,7 +64,7 @@ extern cl::opt<bool> LTODiscardValueNames;
 namespace {
 
 static cl::opt<int> ThreadCount("threads",
-                                cl::init(std::thread::hardware_concurrency()));
+                                cl::init(1));
 
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   DiagnosticPrinterRawOStream DP(errs());
@@ -667,6 +667,7 @@ std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
 
 // Main entry point for the ThinLTO processing
 void ThinLTOCodeGenerator::run() {
+#if 0
   if (CodeGenOnly) {
     // Perform only parallel codegen and return.
     ThreadPool Pool;
@@ -832,4 +833,5 @@ void ThinLTOCodeGenerator::run() {
   // If statistics were requested, print them out now.
   if (llvm::AreStatisticsEnabled())
     llvm::PrintStatistics();
+#endif
 }

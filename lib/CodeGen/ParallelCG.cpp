@@ -49,6 +49,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
     return M;
   }
 
+#if 0
   // Create ThreadPool in nested scope so that threads will be joined
   // on destruction.
   {
@@ -95,5 +96,6 @@ std::unique_ptr<Module> llvm::splitCodeGen(
         PreserveLocals);
   }
 
+#endif
   return {};
 }
