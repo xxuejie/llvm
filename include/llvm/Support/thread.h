@@ -14,6 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #ifndef LLVM_SUPPORT_THREAD_H
 #define LLVM_SUPPORT_THREAD_H
 
@@ -62,5 +64,7 @@ struct thread {
 }
 
 #endif // LLVM_ENABLE_THREADS
+
+#endif
 
 #endif

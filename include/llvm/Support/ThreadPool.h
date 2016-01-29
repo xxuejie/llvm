@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #ifndef LLVM_SUPPORT_THREAD_POOL_H
 #define LLVM_SUPPORT_THREAD_POOL_H
 
@@ -134,3 +136,5 @@ private:
 }
 
 #endif // LLVM_SUPPORT_THREAD_POOL_H
+
+#endif
