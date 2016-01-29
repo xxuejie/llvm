@@ -16,6 +16,8 @@
 
 #include "llvm/Support/thread.h"
 
+# if 0
+
 #ifdef _MSC_VER
 // concrt.h depends on eh.h for __uncaught_exception declaration
 // even if we disable exceptions.
@@ -133,5 +135,7 @@ private:
 #endif
 };
 }
+
+# endif
 
 #endif // LLVM_SUPPORT_THREAD_POOL_H

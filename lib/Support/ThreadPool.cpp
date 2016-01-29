@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #include "llvm/Support/ThreadPool.h"
 
 #include "llvm/Config/llvm-config.h"
@@ -18,7 +20,7 @@
 
 using namespace llvm;
 
-#if LLVM_ENABLE_THREADS
+#if LLVM_ENABLE_THREADS && 0
 
 // Default to std::thread::hardware_concurrency
 ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
@@ -154,5 +156,7 @@ std::shared_future<ThreadPool::VoidTy> ThreadPool::asyncImpl(TaskTy Task) {
 ThreadPool::~ThreadPool() {
   wait();
 }
+
+#endif
 
 #endif
