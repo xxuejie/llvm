@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if 0
+
 #include "llvm/Support/ThreadPool.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -166,3 +168,5 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
   }
   ASSERT_EQ(5, checked_in);
 }
+
+#endif
