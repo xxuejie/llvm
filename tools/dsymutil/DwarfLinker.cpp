@@ -1635,7 +1635,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
                   File)) {
             Line = DIE->getAttributeValueAsUnsignedConstant(
                 &U.getOrigUnit(), dwarf::DW_AT_decl_line, 0);
-#ifdef HAVE_REALPATH
+#if defined(HAVE_REALPATH) && defined(PATH_MAX)
             // Cache the resolved paths, because calling realpath is expansive.
             if (const char *ResolvedPath = U.getResolvedPath(FileNum)) {
               File = ResolvedPath;
