@@ -133,6 +133,7 @@ endif()
 # build might work on ELF but fail on MachO/COFF.
 if(NOT (${TARGET_TRIPLE} MATCHES "darwin" OR
         ${TARGET_TRIPLE} MATCHES "windows" OR
+        ${TARGET_TRIPLE} MATCHES "mingw" OR
         ${TARGET_TRIPLE} MATCHES "freebsd" OR
         ${TARGET_TRIPLE} MATCHES "netbsd" OR
         ${TARGET_TRIPLE} MATCHES "openbsd") AND
