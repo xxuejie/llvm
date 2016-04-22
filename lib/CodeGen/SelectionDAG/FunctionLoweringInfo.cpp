@@ -113,7 +113,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
         // do this if there is an extra alignment requirement.
-        if (AI->isStaticAlloca() && 
+        if (AI->isStaticAlloca() &&
             (TFI->isStackRealignable() || (Align <= StackAlign))) {
           const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
           uint64_t TySize = MF->getDataLayout().getTypeAllocSize(Ty);
@@ -292,7 +292,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
   if (Personality == EHPersonality::MSVC_CXX)
     calculateWinCXXEHStateNumbers(&fn, EHInfo);
-  else if (isAsynchronousEHPersonality(Personality))
+  else if (isSEHEhPersonality(Personality))
     calculateSEHStateNumbers(&fn, EHInfo);
   else if (Personality == EHPersonality::CoreCLR)
     calculateClrEHStateNumbers(&fn, EHInfo);

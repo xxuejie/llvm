@@ -1357,7 +1357,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *IndexTy = (*I)->getType();
     Type *NewIndexType = IndexTy->isVectorTy() ?
       VectorType::get(IntPtrTy, IndexTy->getVectorNumElements()) : IntPtrTy;
- 
+
     // If the element type has zero size then any index over it is equivalent
     // to an index of zero, so replace it with zero if it is not zero already.
     if (SeqTy->getElementType()->isSized() &&
@@ -2362,6 +2362,8 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::GNU_ObjC:
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_X86SEH_Rust:
+  case EHPersonality::MSVC_Win64SEH_Rust:
   case EHPersonality::MSVC_CXX:
   case EHPersonality::CoreCLR:
     return TypeInfo->isNullValue();

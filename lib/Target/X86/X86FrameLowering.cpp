@@ -68,7 +68,7 @@ X86FrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
 // needsFrameIndexResolution - Do we need to perform FI resolution for
 // this function. Normally, this is required only when the function
 // has any stack objects. However, FI resolution actually has another job,
-// not apparent from the title - it resolves callframesetup/destroy 
+// not apparent from the title - it resolves callframesetup/destroy
 // that were not simplified earlier.
 // So, this is required for x86 functions that have push sequences even
 // when there are no stack objects.
@@ -549,7 +549,7 @@ MachineInstr *X86FrameLowering::emitStackProbeInline(
   int64_t RCXShadowSlot = 0;
   int64_t RDXShadowSlot = 0;
 
-  // If inlining in the prolog, save RCX and RDX.     
+  // If inlining in the prolog, save RCX and RDX.
   // Future optimization: don't save or restore if not live in.
   if (InProlog) {
     // Compute the offsets. We need to account for things already
@@ -912,7 +912,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       STI.isTarget64BitILP32()
           ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
-  
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -1239,7 +1239,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           .addImm(FramePtr)
           .addImm(SEHFrameOffset)
           .setMIFlag(MachineInstr::FrameSetup);
-      if (isAsynchronousEHPersonality(Personality))
+      if (isSEHEhPersonality(Personality))
         MF.getWinEHFuncInfo()->SEHSetFrameOffset = SEHFrameOffset;
     }
   } else if (IsFunclet && STI.is32Bit()) {
@@ -1464,7 +1464,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MBBI->getOpcode() == X86::CATCHRET) {
     // SEH shouldn't use catchret.
-    assert(!isAsynchronousEHPersonality(
+    assert(!isSEHEhPersonality(
                classifyEHPersonality(MF.getFunction()->getPersonalityFn())) &&
            "SEH should not use CATCHRET");
 
@@ -1900,7 +1900,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     // funclets. emitEpilogue transforms these to normal jumps.
     if (MI->getOpcode() == X86::CATCHRET) {
       const Function *Func = MBB.getParent()->getFunction();
-      bool IsSEH = isAsynchronousEHPersonality(
+      bool IsSEH = isSEHEhPersonality(
           classifyEHPersonality(Func->getPersonalityFn()));
       if (IsSEH)
         return true;
@@ -2462,7 +2462,7 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
     Regs[FoundRegs++] = Regs[0];
 
   for (int i = 0; i < NumPops; ++i)
-    BuildMI(MBB, MBBI, DL, 
+    BuildMI(MBB, MBBI, DL,
             TII.get(STI.is64Bit() ? X86::POP64r : X86::POP32r), Regs[i]);
 
   return true;
@@ -2493,7 +2493,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     MachineModuleInfo &MMI = MF.getMMI();
     const Function *Fn = MF.getFunction();
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-    bool DwarfCFI = !WindowsCFI && 
+    bool DwarfCFI = !WindowsCFI &&
                     (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
 
     // If we have any exception handlers in this function, and we adjust
@@ -2522,14 +2522,14 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // If this is a callee-pop calling convention, emit a CFA adjust for
     // the amount the callee popped.
     if (isDestroy && InternalAmt && DwarfCFI && !hasFP(MF))
-      BuildCFI(MBB, I, DL, 
+      BuildCFI(MBB, I, DL,
                MCCFIInstruction::createAdjustCfaOffset(nullptr, -InternalAmt));
 
     if (Amount) {
       // Add Amount to SP to destroy a frame, and subtract to setup.
       int Offset = isDestroy ? Amount : -Amount;
 
-      if (!(Fn->optForMinSize() && 
+      if (!(Fn->optForMinSize() &&
             adjustStackWithPops(MBB, I, DL, Offset)))
         BuildStackAdjustment(MBB, I, DL, Offset, /*InEpilogue=*/false);
     }
@@ -2547,7 +2547,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
 
       if (CFAOffset) {
         CFAOffset = isDestroy ? -CFAOffset : CFAOffset;
-        BuildCFI(MBB, I, DL, 
+        BuildCFI(MBB, I, DL,
                  MCCFIInstruction::createAdjustCfaOffset(nullptr, CFAOffset));
       }
     }

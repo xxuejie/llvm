@@ -254,7 +254,8 @@ Type *WinEHStatePass::getSEHRegistrationType() {
 // and after that is personality function specific.
 void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
   assert(Personality == EHPersonality::MSVC_CXX ||
-         Personality == EHPersonality::MSVC_X86SEH);
+         Personality == EHPersonality::MSVC_X86SEH ||
+         Personality == EHPersonality::MSVC_X86SEH_Rust);
 
   StringRef PersonalityName = PersonalityFn->getName();
   IRBuilder<> Builder(&F->getEntryBlock(), F->getEntryBlock().begin());
@@ -273,7 +274,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     Function *Trampoline = generateLSDAInEAXThunk(F);
     Link = Builder.CreateStructGEP(RegNodeTy, RegNode, 1);
     linkExceptionRegistration(Builder, Trampoline);
-  } else if (Personality == EHPersonality::MSVC_X86SEH) {
+  } else {
     // If _except_handler4 is in use, some additional guard checks and prologue
     // stuff is required.
     bool UseStackGuard = (PersonalityName == "_except_handler4");
@@ -304,8 +305,6 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     Builder.CreateStore(LSDA, Builder.CreateStructGEP(RegNodeTy, RegNode, 3));
     Link = Builder.CreateStructGEP(RegNodeTy, RegNode, 2);
     linkExceptionRegistration(Builder, PersonalityFn);
-  } else {
-    llvm_unreachable("unexpected personality function");
   }
 
   // Insert an unlink before all returns.
@@ -408,7 +407,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       {RegNodeI8});
 
   // Calculate state numbers.
-  if (isAsynchronousEHPersonality(Personality))
+  if (isSEHEhPersonality(Personality))
     calculateSEHStateNumbers(&F, FuncInfo);
   else
     calculateWinCXXEHStateNumbers(&F, FuncInfo);

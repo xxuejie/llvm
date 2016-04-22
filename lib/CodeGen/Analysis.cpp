@@ -686,7 +686,7 @@ llvm::getFuncletMembership(const MachineFunction &MF) {
     return FuncletMembership;
 
   int EntryBBNumber = MF.front().getNumber();
-  bool IsSEH = isAsynchronousEHPersonality(
+  bool IsSEH = isSEHEhPersonality(
       classifyEHPersonality(MF.getFunction()->getPersonalityFn()));
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();

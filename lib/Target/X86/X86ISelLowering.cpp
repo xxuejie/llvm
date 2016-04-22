@@ -16440,11 +16440,11 @@ static int getSEHRegistrationNodeSize(const Function *Fn) {
         "querying registration node size for function without personality");
   // The RegNodeSize is 6 32-bit words for SEH and 4 for C++ EH. See
   // WinEHStatePass for the full struct definition.
-  switch (classifyEHPersonality(Fn->getPersonalityFn())) {
-  case EHPersonality::MSVC_X86SEH: return 24;
-  case EHPersonality::MSVC_CXX: return 16;
-  default: break;
-  }
+  auto Pers = classifyEHPersonality(Fn->getPersonalityFn());
+  if (isMSVC32Personality(Pers))
+    return 24;
+  else if (Pers == EHPersonality::MSVC_CXX)
+    return 16;
   report_fatal_error(
       "can only recover FP for 32-bit MSVC EH personality functions");
 }
@@ -22187,7 +22187,7 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr *MI,
   MachineBasicBlock *TargetMBB = MI->getOperand(0).getMBB();
   DebugLoc DL = MI->getDebugLoc();
 
-  assert(!isAsynchronousEHPersonality(
+  assert(!isSEHEhPersonality(
              classifyEHPersonality(MF->getFunction()->getPersonalityFn())) &&
          "SEH does not use catchret!");
 
@@ -22216,7 +22216,7 @@ X86TargetLowering::EmitLoweredCatchPad(MachineInstr *MI,
                                        MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   const Constant *PerFn = MF->getFunction()->getPersonalityFn();
-  bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(PerFn));
+  bool IsSEH = isSEHEhPersonality(classifyEHPersonality(PerFn));
   // Only 32-bit SEH requires special handling for catchpad.
   if (IsSEH && Subtarget->is32Bit()) {
     const TargetInstrInfo &TII = *Subtarget->getInstrInfo();

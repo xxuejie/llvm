@@ -50,7 +50,7 @@ static cl::opt<bool> DisableCleanups(
     cl::init(false));
 
 namespace {
-  
+
 class WinEHPrepare : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
@@ -983,7 +983,7 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
           IsUnreachableCleanupret) {
         changeToUnreachable(TI, /*UseLLVMTrap=*/false);
       } else if (isa<InvokeInst>(TI)) {
-        if (Personality == EHPersonality::MSVC_CXX && CleanupPad) {
+        if (canSimplifyInvokeNoUnwindInCleanupPad(Personality) && CleanupPad) {
           // Invokes within a cleanuppad for the MSVC++ personality never
           // transfer control to their unwind edge: the personality will
           // terminate the program.

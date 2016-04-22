@@ -27,9 +27,11 @@ enum class EHPersonality {
   GNU_ObjC,
   MSVC_X86SEH,
   MSVC_Win64SEH,
+  MSVC_X86SEH_Rust,
+  MSVC_Win64SEH_Rust,
   MSVC_CXX,
   CoreCLR,
-  Rust
+  Rust,
 };
 
 /// \brief See if the given exception handling personality function is one
@@ -52,6 +54,20 @@ inline bool isAsynchronousEHPersonality(EHPersonality Pers) {
   llvm_unreachable("invalid enum");
 }
 
+/// \brief Returns true if this personality uses SEH (and isn't C++)
+inline bool isSEHEhPersonality(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_X86SEH_Rust:
+  case EHPersonality::MSVC_Win64SEH_Rust:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
+
 /// \brief Returns true if this is a personality function that invokes
 /// handler funclets (which must return to it).
 inline bool isFuncletEHPersonality(EHPersonality Pers) {
@@ -59,6 +75,8 @@ inline bool isFuncletEHPersonality(EHPersonality Pers) {
   case EHPersonality::MSVC_CXX:
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_X86SEH_Rust:
+  case EHPersonality::MSVC_Win64SEH_Rust:
   case EHPersonality::CoreCLR:
     return true;
   default:
@@ -80,7 +98,44 @@ inline bool isNoOpWithoutInvoke(EHPersonality Pers) {
   llvm_unreachable("invalid enum");
 }
 
+/// \brief Return true if this personality is used for 64-bit funclets (not C++)
+inline bool isMSVC64Personality(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_Win64SEH_Rust:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
+
+/// \brief Return true if this personality is used for 32-bit funclets (not C++)
+inline bool isMSVC32Personality(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_X86SEH_Rust:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
+
 bool canSimplifyInvokeNoUnwind(const Function *F);
+
+/// \brief Return true if an invoke in a cleanup pad can be simplified
+inline bool canSimplifyInvokeNoUnwindInCleanupPad(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_X86SEH_Rust:
+  case EHPersonality::MSVC_Win64SEH_Rust:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
 
 typedef TinyPtrVector<BasicBlock *> ColorVector;
 

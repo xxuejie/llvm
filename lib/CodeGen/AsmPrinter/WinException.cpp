@@ -119,7 +119,7 @@ void WinException::endFunction(const MachineFunction *MF) {
   endFunclet();
 
   // endFunclet will emit the necessary .xdata tables for x64 SEH.
-  if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets())
+  if (isMSVC64Personality(Per) && MMI->hasEHFunclets())
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
@@ -133,9 +133,9 @@ void WinException::endFunction(const MachineFunction *MF) {
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
-    if (Per == EHPersonality::MSVC_Win64SEH)
+    if (isMSVC64Personality(Per))
       emitCSpecificHandlerTable(MF);
-    else if (Per == EHPersonality::MSVC_X86SEH)
+    else if (isMSVC32Personality(Per))
       emitExceptHandlerTable(MF);
     else if (Per == EHPersonality::MSVC_CXX)
       emitCXXFrameHandler3Table(MF);
@@ -245,7 +245,7 @@ void WinException::endFunclet() {
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->EmitValue(create32bitRef(FuncInfoXData), 4);
-    } else if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets() &&
+    } else if (isMSVC64Personality(Per) && MMI->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
