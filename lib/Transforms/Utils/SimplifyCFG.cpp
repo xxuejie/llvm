@@ -2417,7 +2417,7 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
   // where OtherBB is the single other predecessor of BB's only successor.
   PHINode *PHI = nullptr;
   BasicBlock *Succ = BB->getSingleSuccessor();
-  
+
   for (auto I = Succ->begin(); isa<PHINode>(I); ++I)
     if (cast<PHINode>(I)->getIncomingValueForBlock(BB) == V) {
       PHI = cast<PHINode>(I);
@@ -2561,7 +2561,7 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
 
   QStore->eraseFromParent();
   PStore->eraseFromParent();
-  
+
   return true;
 }
 
@@ -2593,7 +2593,7 @@ static bool mergeConditionalStores(BranchInst *PBI, BranchInst *QBI) {
   // We model triangles as a type of diamond with a nullptr "true" block.
   // Triangles are canonicalized so that the fallthrough edge is represented by
   // a true condition, as in the diagram above.
-  //  
+  //
   BasicBlock *PTB = PBI->getSuccessor(0);
   BasicBlock *PFB = PBI->getSuccessor(1);
   BasicBlock *QTB = QBI->getSuccessor(0);
@@ -2652,7 +2652,7 @@ static bool mergeConditionalStores(BranchInst *PBI, BranchInst *QBI) {
       if (StoreInst *SI = dyn_cast<StoreInst>(&I))
         QStoreAddresses.insert(SI->getPointerOperand());
   }
-  
+
   set_intersect(PStoreAddresses, QStoreAddresses);
   // set_intersect mutates PStoreAddresses in place. Rename it here to make it
   // clear what it contains.
@@ -3381,7 +3381,12 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
     // This isn't an empty cleanup.
     return false;
 
-  // Check that there are no other instructions except for debug intrinsics.
+  // We cannot kill the pad if it has multiple uses.  This typically arises
+  // from unreachable basic blocks.
+  if (!CPInst->hasOneUse())
+    return false;
+
+  // Check that there are no other instructions except for benign intrinsics.
   BasicBlock::iterator I = CPInst->getIterator(), E = RI->getIterator();
   while (++I != E)
     if (!isa<DbgInfoIntrinsic>(I))
@@ -3818,17 +3823,17 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
     }
   }
 
-  // If we can prove that the cases must cover all possible values, the 
-  // default destination becomes dead and we can remove it.  If we know some 
+  // If we can prove that the cases must cover all possible values, the
+  // default destination becomes dead and we can remove it.  If we know some
   // of the bits in the value, we can use that to more precisely compute the
   // number of possible unique case values.
   bool HasDefault =
     !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
-  const unsigned NumUnknownBits = Bits - 
+  const unsigned NumUnknownBits = Bits -
     (KnownZero.Or(KnownOne)).countPopulation();
   assert(NumUnknownBits <= Bits);
   if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */ &&  
+      NumUnknownBits < 64 /* avoid overflow */ &&
       SI->getNumCases() == (1ULL << NumUnknownBits)) {
     DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
     BasicBlock *NewDefault = SplitBlockPredecessors(SI->getDefaultDest(),
@@ -4584,7 +4589,7 @@ static void reuseTableCompare(User *PhiUser, BasicBlock *PhiBlock,
     assert((CaseConst == TrueConst || CaseConst == FalseConst) &&
            "Expect true or false as compare result.");
   }
-  
+
   // Check if the branch instruction dominates the phi node. It's a simple
   // dominance check, but sufficient for our needs.
   // Although this check is invariant in the calling loops, it's better to do it
@@ -5149,7 +5154,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         if (PBI != BI && PBI->isConditional())
           if (mergeConditionalStores(PBI, BI))
             return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
-  
+
   return false;
 }
 
