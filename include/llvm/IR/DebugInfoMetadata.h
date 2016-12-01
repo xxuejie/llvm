@@ -1402,6 +1402,7 @@ public:
   }
   bool isExplicit() const { return getFlags() & FlagExplicit; }
   bool isPrototyped() const { return getFlags() & FlagPrototyped; }
+  bool isMainSubprogram() const { return getFlags() & FlagMainSubprogram; }
 
   /// \brief Check if this is reference-qualified.
   ///
