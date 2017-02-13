@@ -1984,6 +1984,16 @@ static bool jumpTableFollowsTB(MachineInstr *JTMI, MachineInstr *CPEMI) {
          &*MBB->begin() == CPEMI;
 }
 
+static bool registerDefinedBetween(unsigned Reg,
+                                   MachineBasicBlock::iterator From,
+                                   MachineBasicBlock::iterator To,
+                                   const TargetRegisterInfo *TRI) {
+  for (auto I = From; I != To; ++I)
+    if (I->modifiesRegister(Reg, TRI))
+      return true;
+  return false;
+}
+
 /// optimizeThumb2JumpTables - Use tbb / tbh instructions to generate smaller
 /// jumptables when it's possible.
 bool ARMConstantIslands::optimizeThumb2JumpTables() {
@@ -2076,6 +2086,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
         continue;
 
       // If we're in PIC mode, there should be another ADD following.
+      auto *TRI = STI->getRegisterInfo();
       if (isPositionIndependentOrROPI) {
         MachineInstr *Add = Load->getNextNode();
         if (Add->getOpcode() != ARM::tADDrr ||
@@ -2085,11 +2096,16 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
           continue;
         if (Add->getOperand(0).getReg() != MI->getOperand(0).getReg())
           continue;
-
+        if (registerDefinedBetween(IdxReg, Add->getNextNode(), MI, TRI))
+          // IdxReg gets redefined in the middle of the sequence.
+          continue;
         Add->eraseFromParent();
         DeadSize += 2;
       } else {
         if (Load->getOperand(0).getReg() != MI->getOperand(0).getReg())
+          continue;
+        if (registerDefinedBetween(IdxReg, Load->getNextNode(), MI, TRI))
+          // IdxReg gets redefined in the middle of the sequence.
           continue;
       }
 
