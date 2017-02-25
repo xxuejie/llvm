@@ -298,7 +298,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_SaveList;
-      return CSR_64_AllRegs_SaveList;
+      if (HasSSE)
+        return CSR_64_AllRegs_SaveList;
+      return CSR_64_AllRegs_NoSSE_SaveList;
     } else {
       if (HasAVX512)
         return CSR_32_AllRegs_AVX512_SaveList;
@@ -392,7 +394,9 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
         return CSR_64_AllRegs_AVX512_RegMask;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_RegMask;
-      return CSR_64_AllRegs_RegMask;
+      if (HasSSE)
+        return CSR_64_AllRegs_RegMask;
+      return CSR_64_AllRegs_NoSSE_RegMask;
     } else {
       if (HasAVX512)
         return CSR_32_AllRegs_AVX512_RegMask;
