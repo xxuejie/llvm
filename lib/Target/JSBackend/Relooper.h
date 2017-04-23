@@ -344,7 +344,12 @@ struct Debugging {
 
 // C API - useful for binding to other languages
 
-#ifdef _WIN32
+// #ifdef _WIN32
+// Any item marked as dllexport causes the mingw linker to no longer export
+// unmarked symbols, which causes build problems for rustc (since the symbols it
+// needs are no longer exported), so make sure all symbols are unmarked.
+// See: https://github.com/rust-lang/rust/pull/40123#issuecomment-293798939
+#if 0
   #ifdef RELOOPERDLL_EXPORTS
     #define RELOOPERDLL_API __declspec(dllexport)
   #else
