@@ -2589,6 +2589,9 @@ public:
     // TargetLowering::LowerCall that perform tail call conversions.
     bool IsTailCall;
 
+    // Is Call lowering done post SelectionDAG type legalization.
+    bool IsPostTypeLegalization = false;
+
     unsigned NumFixedArgs;
     CallingConv::ID CallConv;
     SDValue Callee;
@@ -2711,6 +2714,11 @@ public:
 
     CallLoweringInfo &setIsPatchPoint(bool Value = true) {
       IsPatchPoint = Value;
+      return *this;
+    }
+
+    CallLoweringInfo &setIsPostTypeLegalization(bool Value=true) {
+      IsPostTypeLegalization = Value;
       return *this;
     }
 
