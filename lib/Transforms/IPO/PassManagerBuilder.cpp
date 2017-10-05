@@ -501,9 +501,11 @@ void PassManagerBuilder::populateModulePassManager(
   // Start of CallGraph SCC passes.
   if (!DisableUnitAtATime)
     MPM.add(createPruneEHPass()); // Remove dead EH info
+  bool RunInliner = false;
   if (Inliner) {
     MPM.add(Inliner);
     Inliner = nullptr;
+    RunInliner = true;
   }
   if (!DisableUnitAtATime)
     MPM.add(createPostOrderFunctionAttrsLegacyPass());
@@ -519,6 +521,17 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createBarrierNoopPass());
   if (RunPartialInlining)
     MPM.add(createPartialInliningPass());
+
+  // The inliner performs some kind of dead code elimination as it goes,
+  // but there are cases that are not really caught by it. We might
+  // at some point consider teaching the inliner about them, but it
+  // is OK for now to run GlobalOpt + GlobalDCE in tandem as their
+  // benefits generally outweight the cost, making the whole pipeline
+  // faster.
+  if (RunInliner) {
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+  }
 
   if (!DisableUnitAtATime && OptLevel > 1 && !PrepareForLTO &&
       !PrepareForThinLTO)
