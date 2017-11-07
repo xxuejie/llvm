@@ -2535,6 +2535,7 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
   unsigned Regs[2];
   unsigned FoundRegs = 0;
 
+  auto &MRI = MBB.getParent()->getRegInfo();
   auto RegMask = Prev->getOperand(1);
 
   auto &RegClass =
@@ -2546,6 +2547,10 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
     // Since we're immediately after a call, any register that is clobbered
     // by the call and not defined by it can be considered dead.
     if (!RegMask.clobbersPhysReg(Candidate))
+      continue;
+
+    // Don't clobber reserved registers
+    if (MRI.isReserved(Candidate))
       continue;
 
     bool IsDef = false;
