@@ -871,7 +871,7 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V, uint64_t Offset,
 }
 
 void DIBuilder::replaceVTableHolder(DICompositeType *&T,
-                                    DICompositeType *VTableHolder) {
+                                    DIType *VTableHolder) {
   {
     TypedTrackingMDRef<DICompositeType> N(T);
     N->replaceVTableHolder(VTableHolder);
