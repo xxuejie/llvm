@@ -25,6 +25,10 @@ include "llvm/Target/Target.td"
 
 def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "true",
                                       "Enable 128-bit SIMD">;
+def FeatureNontrappingFPToInt :
+      SubtargetFeature<"nontrapping-fptoint",
+                       "HasNontrappingFPToInt", "true",
+                       "Enable non-trapping float-to-int conversion operators">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
