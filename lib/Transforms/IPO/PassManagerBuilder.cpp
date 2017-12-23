@@ -291,6 +291,9 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
 void PassManagerBuilder::addFunctionSimplificationPasses(
     legacy::PassManagerBase &MPM) {
   // Start of function pass.
+
+  // **** Initial canonicalization sequence, clean up the code after inlining.
+
   // Break up aggregate allocas, using SSAUpdater.
   MPM.add(createSROAPass());
   MPM.add(createEarlyCSEPass());              // Catch trivial redundancies
@@ -299,21 +302,62 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createJumpThreadingPass());         // Thread jumps.
   MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
   MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
-  // Combine silly seq's
-  addInstructionCombiningPass(MPM);
+
+  // **** After we have taken out the trash, we can do more expensive and
+  // aggressive optimizations.
+  //
+  // I have no idea what is the best order of these passes.
+  //
+  // ($) there might be some `br i1 false` here that InstCombine discovered
+  // that we might want to kill somehow. However, every SimplifyCfg or
+  // JumpThreading I add takes 1% of the compiler's performance even if
+  // it does nothing.
+  //
+  // I believe we could have some sort of "br i1 false"-removal pass
+  // in strategic places, that should not be too slow. Ideally, in
+  // 90% of the inter-pass transitions the pass would have
+  // nothing to do and therefore be fast (there's an O(N*M) problem,
+  // where for a large function we might get hit with the full
+  // cost). That needs to be further investigated.
+
+  addInstructionCombiningPass(MPM); // Combine silly seq's
   if (SizeLevel == 0 && !DisableLibCallsShrinkWrap)
     MPM.add(createLibCallsShrinkWrapPass());
   addExtensionsToPM(EP_Peephole, MPM);
-
   MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+  if (OptLevel > 1) {
+    // Merge duplicate loads and do cross-BB load/store forwarding. This should
+    // happen before the loop passes. This is done earlier than in C++ because
+    // these optimizations are much more useful in Rust, because of noalias.
+    MPM.add(NewGVN ? createNewGVNPass()
+	           : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+  }
   MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
+
+  // **** Loop optimizations. There are 2 loop optimization "sequences",
+  // with an InstCombine+SimplifyCfg in the middle.
+
+  // Seq #1
+
   MPM.add(createReassociatePass());           // Reassociate expressions
   // Rotate Loop - disable header duplication at -Oz
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
   MPM.add(createLICMPass());                  // Hoist loop invariants
+  MPM.add(createIndVarSimplifyPass());        // Simplify Indvars
   MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3));
+
+  // Cleanup between seqs.
+
   MPM.add(createCFGSimplificationPass());
   addInstructionCombiningPass(MPM);
+
+  // Seq #2
+
+  // I am intentionally duplicating IndVarSimplify. The SimplifyCfg pass after
+  // the first IndVarSimplify gets rid of a bunch of junk that interferes
+  // with loop idiom recognition, and the second IndVarSimplify was present
+  // in C++ so I don't want to remove it much.
+
   MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
   MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
   MPM.add(createLoopDeletionPass());          // Delete dead loops
@@ -325,25 +369,31 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createSimpleLoopUnrollPass());    // Unroll small loops
   addExtensionsToPM(EP_LoopOptimizerEnd, MPM);
 
+  // End of loop optimization sequence.
+
+  // Optimization sequences I know we need:
+  // UNROLL -> SIMPLIFY -> MEMCPYOPT -> INSTCOMBINE -> GVN - needed for
+
+  // Exit out of LCSSA, and do some cleanup after loop unrolling.
+  MPM.add(createCFGSimplificationPass());
+
+  MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
   if (OptLevel > 1) {
     if (EnableMLSM)
       MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
     MPM.add(NewGVN ? createNewGVNPass()
                    : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
   }
-  MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
   MPM.add(createSCCPPass());                  // Constant prop with SCCP
 
   // Delete dead bit computations (instcombine runs after to fold away the dead
   // computations, and then ADCE will run later to exploit any new DCE
   // opportunities that creates).
   MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
-
   // Run instcombine after redundancy elimination to exploit opportunities
   // opened up by them.
   addInstructionCombiningPass(MPM);
-  if (OptLevel > 1)
-    MPM.add(createGVNPass(DisableGVNLoadPRE));  // Remove redundancies
+
   addExtensionsToPM(EP_Peephole, MPM);
   MPM.add(createJumpThreadingPass());         // Thread jumps
   MPM.add(createCorrelatedValuePropagationPass());
