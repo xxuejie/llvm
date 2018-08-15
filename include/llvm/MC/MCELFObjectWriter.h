@@ -74,7 +74,7 @@ public:
       case Triple::CloudABI:
         return ELF::ELFOSABI_CLOUDABI;
       case Triple::HermitCore:
-        return ELF::ELFOSABI_HERMITCORE;
+        return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:
       case Triple::FreeBSD:
         return ELF::ELFOSABI_FREEBSD;
